@@ -1,24 +1,32 @@
 const std = @import("std");
+const yazap = @import("yazap");
+const StbImage = @import("./stb_image.zig");
+
+const App = yazap.App;
+const Arg = yazap.Arg;
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    const allocator = std.heap.c_allocator;
+    StbImage.allocator = allocator;
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    var app = App.init(allocator, "qohi", null);
+    defer app.deinit();
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    var qohi = app.rootCommand();
 
-    try bw.flush(); // don't forget to flush!
-}
+    try qohi.addArg(Arg.positional("INPUT", null, null));
 
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
+    const matches = try app.parseProcess();
+
+    const input_name = matches.getSingleValue("INPUT") orelse return error.NoInputFile;
+    const input_file = try std.fs.cwd().openFile(input_name, .{});
+
+    var image = StbImage.load(&input_file, StbImage.Channels.rgba);
+    defer image.deinit();
+
+    if (image == .err) {
+        std.debug.print("error opening image: {s}\n", .{image.err});
+    } else {
+        std.debug.print("{}x{}, {} channels\n", .{ image.ok.x, image.ok.y, @enumToInt(image.ok.channels) });
+    }
 }
