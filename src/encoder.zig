@@ -8,25 +8,36 @@ const Qoi = @import("./qoi.zig");
 last_pixel: Pixel = .{ .r = 0, .g = 0, .b = 0, .a = 255 },
 recent_pixels: [64]Pixel = .{.{ .r = 0, .g = 0, .b = 0, .a = 0 }} ** 64,
 run_length: u6 = 0,
-histogram: Qoi.Histogram = Qoi.Histogram.init(),
+histogram: std.AutoHashMap(Qoi.Symbol, u64),
+symbols: std.ArrayList(Qoi.Symbol),
 total_qoi_size: usize = 0,
 
 pub fn init(allocator: std.mem.Allocator) Encoder {
-    _ = allocator;
-    return .{};
+    return .{
+        .histogram = std.AutoHashMap(Qoi.Symbol, u64).init(allocator),
+        .symbols = std.ArrayList(Qoi.Symbol).init(allocator),
+    };
 }
 
 pub fn deinit(self: *Encoder) void {
+    self.histogram.deinit();
+    self.symbols.deinit();
     self.* = undefined;
 }
 
 fn emit(self: *Encoder, chunk: Qoi.Chunk) !void {
     // std.debug.print("{any}\n", .{chunk});
-    var buf: [5]Qoi.Symbol = undefined;
+    var buf: [9]Qoi.Symbol = undefined;
     const syms = chunk.toSymbols(&buf);
 
     for (syms) |s| {
-        self.histogram.increment(s);
+        const entry = try self.histogram.getOrPut(s);
+        if (entry.found_existing) {
+            entry.value_ptr.* += 1;
+        } else {
+            entry.value_ptr.* = 1;
+        }
+        try self.symbols.append(s);
     }
 
     self.total_qoi_size += switch (chunk) {
@@ -41,19 +52,25 @@ fn emit(self: *Encoder, chunk: Qoi.Chunk) !void {
 
 fn maybeCreateDiff(diff: PixelDifference) ?Qoi.Chunk {
     if (diff.a != 0) return null;
+
+    const DiffType = std.meta.Child(std.meta.FieldType(Qoi.Chunk, .diff));
     return Qoi.Chunk{ .diff = .{
-        std.math.cast(i2, diff.r) orelse return null,
-        std.math.cast(i2, diff.g) orelse return null,
-        std.math.cast(i2, diff.b) orelse return null,
+        std.math.cast(DiffType, diff.r) orelse return null,
+        std.math.cast(DiffType, diff.g) orelse return null,
+        std.math.cast(DiffType, diff.b) orelse return null,
     } };
 }
 
 fn maybeCreateLuma(diff: PixelDifference) ?Qoi.Chunk {
     if (diff.a != 0) return null;
+
+    const DgType = std.meta.FieldType(std.meta.FieldType(Qoi.Chunk, .luma), .dg);
+    const OffsetType = std.meta.FieldType(std.meta.FieldType(Qoi.Chunk, .luma), .dr_dg);
+
     return Qoi.Chunk{ .luma = .{
-        .dg = std.math.cast(i6, diff.g) orelse return null,
-        .dr_dg = std.math.cast(i4, @as(i16, diff.r) - @as(i16, diff.g)) orelse return null,
-        .db_dg = std.math.cast(i4, @as(i16, diff.b) - @as(i16, diff.g)) orelse return null,
+        .dg = std.math.cast(DgType, diff.g) orelse return null,
+        .dr_dg = std.math.cast(OffsetType, @as(i16, diff.r) - @as(i16, diff.g)) orelse return null,
+        .db_dg = std.math.cast(OffsetType, @as(i16, diff.b) - @as(i16, diff.g)) orelse return null,
     } };
 }
 

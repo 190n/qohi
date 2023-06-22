@@ -10,7 +10,14 @@ const App = yazap.App;
 const Arg = yazap.Arg;
 
 pub fn main() !void {
-    const allocator = std.heap.c_allocator;
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = if (std.debug.runtime_safety)
+        gpa.allocator()
+    else
+        std.heap.c_allocator;
+    defer {
+        std.debug.assert(gpa.deinit() == .ok);
+    }
     StbImage.allocator = allocator;
 
     var app = App.init(allocator, "qohi", null);
@@ -44,13 +51,21 @@ pub fn main() !void {
     try e.addPixels(pixels);
     try e.terminate();
 
-    std.debug.print("size as regular QOI: {}\n", .{e.total_qoi_size});
+    const stdout = std.io.getStdOut().writer();
+
+    try stdout.print("size as regular QOI: {}\n", .{e.total_qoi_size});
     const tree = try Huffman.createTree(allocator, &e.histogram);
     defer tree.deinit(allocator);
-    std.debug.print("size with huffman: {}\n", .{try std.math.divCeil(u64, Huffman.getCompressedSize(tree, &e.histogram), 8)});
+    try stdout.print("size with huffman: {}\n", .{try std.math.divCeil(u64, Huffman.getCompressedSize(tree, &e.histogram), 8)});
 
-    var it = e.histogram.iterator();
-    while (it.next()) |entry| {
-        std.debug.print("{any} => {}\n", .{ entry[0], entry[1] });
-    }
+    // var table = try Huffman.buildCodeTable(allocator, tree);
+    // defer table.deinit();
+    // for (e.symbols.items) |s| {
+    //     try stdout.print("{any}\n", .{s});
+    //     const code = table.get(s).?;
+    //     for (0..code.len) |i| {
+    //         try stdout.print("{}", .{(code.code >> @intCast(u6, i)) & 1});
+    //     }
+    //     try stdout.print("\n", .{});
+    // }
 }
