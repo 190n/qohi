@@ -4,6 +4,7 @@ const yazap = @import("yazap");
 const StbImage = @import("./stb_image.zig");
 const Encoder = @import("./encoder.zig");
 const Pixel = @import("./pixel.zig").Pixel;
+const Huffman = @import("./huffman.zig");
 
 const App = yazap.App;
 const Arg = yazap.Arg;
@@ -43,7 +44,11 @@ pub fn main() !void {
     try e.addPixels(pixels);
     try e.terminate();
 
-    std.debug.print("\n\nhistogram:\n", .{});
+    std.debug.print("size as regular QOI: {}\n", .{e.total_qoi_size});
+    const tree = try Huffman.createTree(allocator, &e.histogram);
+    defer tree.deinit(allocator);
+    std.debug.print("size with huffman: {}\n", .{try std.math.divCeil(u64, Huffman.getCompressedSize(tree, &e.histogram), 8)});
+
     var it = e.histogram.iterator();
     while (it.next()) |entry| {
         std.debug.print("{any} => {}\n", .{ entry[0], entry[1] });

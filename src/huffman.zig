@@ -62,6 +62,24 @@ pub fn createTree(allocator: std.mem.Allocator, histogram: *const Qoi.Histogram)
     return pq.remove();
 }
 
+fn getCompressedSizeInternal(tree: *const Node, histogram: *const Qoi.Histogram, code_length: u64) u64 {
+    var size: u64 = 0;
+    if (tree.left) |left| {
+        size += getCompressedSizeInternal(left, histogram, code_length + 1);
+    }
+    if (tree.right) |right| {
+        size += getCompressedSizeInternal(right, histogram, code_length + 1);
+    }
+    if (tree.symbol) |symbol| {
+        size += code_length * histogram.count(symbol);
+    }
+    return size;
+}
+
+pub fn getCompressedSize(tree: *const Node, histogram: *const Qoi.Histogram) u64 {
+    return getCompressedSizeInternal(tree, histogram, 0);
+}
+
 test "createTree" {
     const tree = try createTree(std.testing.allocator, &Qoi.Histogram.init());
     defer tree.deinit(std.testing.allocator);

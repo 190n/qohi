@@ -93,7 +93,7 @@ pub const Histogram = struct {
         self.histogram[getIndex(symbol)] += 1;
     }
 
-    pub fn count(self: *Histogram, symbol: Symbol) u64 {
+    pub fn count(self: *const Histogram, symbol: Symbol) u64 {
         return self.histogram[getIndex(symbol)];
     }
 
