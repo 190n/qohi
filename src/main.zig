@@ -1,6 +1,9 @@
 const std = @import("std");
 const yazap = @import("yazap");
+
 const StbImage = @import("./stb_image.zig");
+const Encoder = @import("./encoder.zig");
+const Pixel = @import("./pixel.zig").Pixel;
 
 const App = yazap.App;
 const Arg = yazap.Arg;
@@ -26,7 +29,23 @@ pub fn main() !void {
 
     if (image == .err) {
         std.debug.print("error opening image: {s}\n", .{image.err});
+        std.process.exit(1);
     } else {
-        std.debug.print("{}x{}, {} channels\n", .{ image.ok.x, image.ok.y, @enumToInt(image.ok.channels) });
+        std.debug.print(
+            "{}x{}, {} channels\n",
+            .{ image.ok.x, image.ok.y, @enumToInt(image.ok.channels_in_file) },
+        );
+    }
+
+    const pixels = @ptrCast([*]const Pixel, image.ok.data.ptr)[0..(image.ok.x * image.ok.y)];
+    var e = Encoder.init(allocator);
+    defer e.deinit();
+    try e.addPixels(pixels);
+    try e.terminate();
+
+    std.debug.print("\n\nhistogram:\n", .{});
+    var it = e.histogram.iterator();
+    while (it.next()) |entry| {
+        std.debug.print("{any} => {}\n", .{ entry[0], entry[1] });
     }
 }
