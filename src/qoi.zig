@@ -32,7 +32,7 @@ pub const Chunk = union(enum) {
                 // buf[0] = Symbol.index;
                 // buf[1] = Symbol.integer(index);
                 // return buf[0..2];
-                buf[0] = Symbol.integer(-@as(i9, index) - 31 - 64);
+                buf[0] = Symbol.index(index);
                 return buf[0..1];
             },
             .diff => |diffs| {
@@ -48,7 +48,7 @@ pub const Chunk = union(enum) {
                 //     buf[i] = Symbol.integer(@field(luma, name));
                 // }
                 // return buf[0..4];
-                buf[0] = Symbol.integer(@as(i9, luma.dg) - 32 - 31 - 64 - 64);
+                buf[0] = Symbol.luma(luma.dg);
                 buf[1] = Symbol.integer(luma.dr_dg);
                 buf[2] = Symbol.integer(luma.db_dg);
                 return buf[0..3];
@@ -57,7 +57,7 @@ pub const Chunk = union(enum) {
                 // buf[0] = Symbol.run;
                 // buf[1] = Symbol.integer(len);
                 // return buf[0..2];
-                buf[0] = Symbol.integer(-@as(i9, len) - 31);
+                buf[0] = Symbol.run(len);
                 return buf[0..1];
             },
         }
@@ -67,14 +67,26 @@ pub const Chunk = union(enum) {
 pub const Symbol = union(enum) {
     rgb: void,
     rgba: void,
-    index: void,
+    index: u6,
     diff: void,
-    luma: void,
-    run: void,
+    luma: i6,
+    run: u6,
     integer: i16,
 
     pub fn integer(x: i16) Symbol {
         return Symbol{ .integer = x };
+    }
+
+    pub fn run(len: u6) Symbol {
+        return Symbol{ .run = len };
+    }
+
+    pub fn luma(dg: i6) Symbol {
+        return Symbol{ .luma = dg };
+    }
+
+    pub fn index(i: u6) Symbol {
+        return Symbol{ .index = i };
     }
 };
 

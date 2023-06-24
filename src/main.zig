@@ -38,11 +38,6 @@ pub fn main() !void {
     if (image == .err) {
         std.debug.print("error opening image: {s}\n", .{image.err});
         std.process.exit(1);
-    } else {
-        std.debug.print(
-            "{}x{}, {} channels\n",
-            .{ image.ok.x, image.ok.y, @enumToInt(image.ok.channels_in_file) },
-        );
     }
 
     const pixels = @ptrCast([*]const Pixel, image.ok.data.ptr)[0..(image.ok.x * image.ok.y)];
@@ -51,21 +46,18 @@ pub fn main() !void {
     try e.addPixels(pixels);
     try e.terminate();
 
-    const stdout = std.io.getStdOut().writer();
-
-    try stdout.print("size as regular QOI: {}\n", .{e.total_qoi_size});
     const tree = try Huffman.createTree(allocator, &e.histogram);
     defer tree.deinit(allocator);
-    try stdout.print("size with huffman: {}\n", .{try std.math.divCeil(u64, Huffman.getCompressedSize(tree, &e.histogram), 8)});
+    const huffman_size = try std.math.divCeil(u64, Huffman.getCompressedSize(tree, &e.histogram), 8);
+    const uncompressed_size = image.ok.x * image.ok.y * @intFromEnum(image.ok.channels_in_file);
 
-    // var table = try Huffman.buildCodeTable(allocator, tree);
-    // defer table.deinit();
-    // for (e.symbols.items) |s| {
-    //     try stdout.print("{any}\n", .{s});
-    //     const code = table.get(s).?;
-    //     for (0..code.len) |i| {
-    //         try stdout.print("{}", .{(code.code >> @intCast(u6, i)) & 1});
-    //     }
-    //     try stdout.print("\n", .{});
-    // }
+    const stdout = std.io.getStdOut().writer();
+    try stdout.print(
+        \\{{
+        \\    "uncompressed": {},
+        \\    "qoi": {},
+        \\    "huffman": {}
+        \\}}
+        \\
+    , .{ uncompressed_size, e.total_qoi_size, huffman_size });
 }

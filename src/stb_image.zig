@@ -131,22 +131,22 @@ pub fn load(stream_ptr: anytype, desired_channels: ?Channels) STBImageResult {
         // possibly cast away constness -- this is okay as stb_image itself doesn't modify the user
         // pointer, it only passes it (as void *) to functions that might modify it, but we will
         // cast back to a const pointer if stream_ptr was originally const.
-        @intToPtr(*anyopaque, @ptrToInt(stream_ptr)),
+        @ptrFromInt(*anyopaque, @intFromPtr(stream_ptr)),
         &x,
         &y,
         &channels_in_file,
-        if (desired_channels) |dc| @enumToInt(dc) else 0,
+        if (desired_channels) |dc| @intFromEnum(dc) else 0,
     );
 
     if (result) |ptr| {
-        const actual_channels = if (desired_channels) |dc| @enumToInt(dc) else @intCast(u3, channels_in_file);
+        const actual_channels = if (desired_channels) |dc| @intFromEnum(dc) else @intCast(u3, channels_in_file);
         return STBImageResult{
             .ok = .{
                 .data = ptr[0..(@intCast(usize, x) * @intCast(usize, y) * actual_channels)],
                 .x = @intCast(usize, x),
                 .y = @intCast(usize, y),
-                .channels = @intToEnum(Channels, actual_channels),
-                .channels_in_file = @intToEnum(Channels, channels_in_file),
+                .channels = @enumFromInt(Channels, actual_channels),
+                .channels_in_file = @enumFromInt(Channels, channels_in_file),
             },
         };
     } else return STBImageResult{
