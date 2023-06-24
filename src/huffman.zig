@@ -62,7 +62,7 @@ pub fn createTree(allocator: std.mem.Allocator, histogram: *const std.AutoHashMa
     return pq.remove();
 }
 
-fn getCompressedSizeInternal(tree: *const Node, histogram: *const std.AutoHashMap(Qoi.Symbol, u64), code_length: u16) u64 {
+fn getCompressedSizeInternal(tree: *const Node, histogram: *const std.AutoHashMap(Qoi.Symbol, u64), code_length: u6) u64 {
     var size: u64 = 0;
     if (tree.left) |left| {
         size += getCompressedSizeInternal(left, histogram, code_length + 1);
@@ -82,7 +82,7 @@ pub fn getCompressedSize(tree: *const Node, histogram: *const std.AutoHashMap(Qo
 
 pub const Code = struct {
     code: u64,
-    len: u16,
+    len: u6,
 
     pub fn init() Code {
         return .{ .code = 0, .len = 0 };
