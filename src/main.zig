@@ -15,9 +15,8 @@ pub fn main() !void {
         gpa.allocator()
     else
         std.heap.c_allocator;
-    defer {
-        std.debug.assert(gpa.deinit() == .ok);
-    }
+    defer std.debug.assert(gpa.deinit() == .ok);
+
     StbImage.allocator = allocator;
 
     var app = App.init(allocator, "qohi", null);

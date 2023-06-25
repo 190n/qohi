@@ -3,7 +3,7 @@
 $.verbose = false;
 const threads = 16;
 
-await $`zig build -Doptimize=ReleaseSafe`;
+await $`zig build -Doptimize=ReleaseFast`;
 
 cd('corpus');
 const categories = await glob('*', { onlyDirectories: true });
@@ -25,6 +25,20 @@ function colorValue(n) {
     return n > 0 ? chalk.green(n) : chalk.red(n);
 }
 
+function printProgress(progress) {
+    const width = 16;
+    const chars = Math.round(width * progress);
+    const blanks = width - chars;
+    process.stdout.write('[');
+    for (let i = 0; i < chars; i++) {
+        process.stdout.write('=');
+    }
+    for (let i = 0; i < blanks; i++) {
+        process.stdout.write(' ');
+    }
+    process.stdout.write(`]\x1b[${width + 2}D`);
+}
+
 async function worker(queue, rawResults, qoiResults) {
     while (queue.length > 0) {
         const file = queue.pop();
@@ -40,17 +54,24 @@ async function worker(queue, rawResults, qoiResults) {
 }
 
 for (const c of categories) {
-    console.log(`${c}:`);
+    process.stdout.write(`${c}: `);
     const pics = await glob(`${c}/*`);
+    const totalLength = pics.length;
     const rawSavings = [], qoiSavings = [];
 
     const workers = [];
     for (let i = 0; i < threads; i++) {
         workers.push(worker(pics, rawSavings, qoiSavings));
     }
+
+    while (pics.length > 0) {
+        await sleep(100);
+        printProgress((totalLength - pics.length) / totalLength);
+    }
+
     await Promise.all(workers);
+    console.log();
 
     console.log(`  vs. raw: avg = ${colorValue(round(mean(rawSavings)))}%, σ = ${round(stddev(rawSavings))}pp`);
     console.log(`  vs. QOI: avg = ${colorValue(round(mean(qoiSavings)))}%, σ = ${round(stddev(qoiSavings))}pp`);
-
 }
