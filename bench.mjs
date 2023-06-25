@@ -26,6 +26,8 @@ function colorValue(n) {
 }
 
 function printProgress(progress) {
+    if (argv.markdown) return;
+
     const width = 16;
     const chars = Math.round(width * progress);
     const blanks = width - chars;
@@ -53,8 +55,17 @@ async function worker(queue, rawResults, qoiResults) {
     }
 }
 
+if (argv.markdown) {
+    console.log('| category | saving vs. raw (avg, %) | stddev (pp) | saving vs. qoi (avg, %) | stddev (pp) |');
+    console.log('|----------|-------------------------|-------------|-------------------------|-------------|');
+}
+
 for (const c of categories) {
-    process.stdout.write(`${c}: `);
+    if (argv.markdown) {
+        process.stdout.write(`| ${c} |`);
+    } else {
+        process.stdout.write(`${c}: `);
+    }
     const pics = await glob(`${c}/*`);
     const totalLength = pics.length;
     const rawSavings = [], qoiSavings = [];
@@ -70,8 +81,14 @@ for (const c of categories) {
     }
 
     await Promise.all(workers);
-    console.log();
 
-    console.log(`  vs. raw: avg = ${colorValue(round(mean(rawSavings)))}%, σ = ${round(stddev(rawSavings))}pp`);
-    console.log(`  vs. QOI: avg = ${colorValue(round(mean(qoiSavings)))}%, σ = ${round(stddev(qoiSavings))}pp`);
+    if (argv.markdown) {
+        process.stdout.write(` ${round(mean(rawSavings))} | ${round(stddev(rawSavings))} |`);
+        process.stdout.write(` ${round(mean(qoiSavings))} | ${round(stddev(qoiSavings))} |`);
+        console.log();
+    } else {
+        console.log();
+        console.log(`  vs. raw: avg = ${colorValue(round(mean(rawSavings)))}%, σ = ${round(stddev(rawSavings))}pp`);
+        console.log(`  vs. QOI: avg = ${colorValue(round(mean(qoiSavings)))}%, σ = ${round(stddev(qoiSavings))}pp`);
+    }
 }
