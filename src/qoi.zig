@@ -38,7 +38,7 @@ pub const Chunk = union(enum) {
             .diff => |diffs| {
                 buf[0] = Symbol.diff;
                 for (diffs, 1..) |x, i| {
-                    buf[i] = Symbol.integer(x);
+                    buf[i] = Symbol.integer(@bitCast(u2, x));
                 }
                 return buf[0..4];
             },
@@ -49,8 +49,8 @@ pub const Chunk = union(enum) {
                 // }
                 // return buf[0..4];
                 buf[0] = Symbol.luma(luma.dg);
-                buf[1] = Symbol.integer(luma.dr_dg);
-                buf[2] = Symbol.integer(luma.db_dg);
+                buf[1] = Symbol.integer(@bitCast(u4, luma.dr_dg));
+                buf[2] = Symbol.integer(@bitCast(u4, luma.db_dg));
                 return buf[0..3];
             },
             .run => |len| {
@@ -71,9 +71,9 @@ pub const Symbol = union(enum) {
     diff: void,
     luma: i6,
     run: u6,
-    integer: i16,
+    integer: u8,
 
-    pub fn integer(x: i16) Symbol {
+    pub fn integer(x: u8) Symbol {
         return Symbol{ .integer = x };
     }
 

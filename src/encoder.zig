@@ -26,7 +26,6 @@ pub fn deinit(self: *Encoder) void {
 }
 
 fn emit(self: *Encoder, chunk: Qoi.Chunk) !void {
-    // std.debug.print("{any}\n", .{chunk});
     var buf: [9]Qoi.Symbol = undefined;
     const syms = chunk.toSymbols(&buf);
 
@@ -75,7 +74,6 @@ fn maybeCreateLuma(diff: PixelDifference) ?Qoi.Chunk {
 }
 
 pub fn addPixel(self: *Encoder, p: Pixel) !void {
-    // std.debug.print("\n{any}\n", .{p});
     defer self.last_pixel = p;
     defer self.recent_pixels[p.hash()] = p;
 

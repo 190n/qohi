@@ -3,7 +3,7 @@
 $.verbose = false;
 const threads = 16;
 
-await $`zig build -Doptimize=ReleaseFast`;
+await $`zig build -Doptimize=ReleaseSafe`;
 
 cd('corpus');
 const categories = await glob('*', { onlyDirectories: true });
@@ -65,7 +65,7 @@ for (const c of categories) {
     }
 
     while (pics.length > 0) {
-        await sleep(100);
+        await sleep(250);
         printProgress((totalLength - pics.length) / totalLength);
     }
 

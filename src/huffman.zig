@@ -43,11 +43,13 @@ pub fn createTree(allocator: std.mem.Allocator, histogram: *const std.AutoHashMa
 
     var it = histogram.iterator();
     while (it.next()) |entry| {
-        try pq.add(try Node.init(allocator, entry.key_ptr.*, entry.value_ptr.*));
+        if (entry.key_ptr.* != .integer) {
+            try pq.add(try Node.init(allocator, entry.key_ptr.*, entry.value_ptr.*));
+        }
     }
 
     // ensure we have at least 2 unique symbols
-    var i: i9 = 0;
+    var i: u8 = 0;
     while (pq.len < 2) : (i += 1) {
         try pq.add(try Node.init(allocator, Qoi.Symbol.integer(i), 1));
     }
@@ -77,7 +79,23 @@ fn getCompressedSizeInternal(tree: *const Node, histogram: *const std.AutoHashMa
 }
 
 pub fn getCompressedSize(tree: *const Node, histogram: *const std.AutoHashMap(Qoi.Symbol, u64)) u64 {
-    return getCompressedSizeInternal(tree, histogram, 0);
+    var size = getCompressedSizeInternal(tree, histogram, 0);
+    // account for integer symbols
+    var it = histogram.iterator();
+    while (it.next()) |entry| {
+        if (entry.key_ptr.* == .integer) {
+            const int = entry.key_ptr.integer;
+            const count = entry.value_ptr.*;
+            if (int <= 0b11) {
+                size += 3 * count;
+            } else if (int <= 0b1111) {
+                size += 6 * count;
+            } else {
+                size += 10 * count;
+            }
+        }
+    }
+    return size;
 }
 
 pub const Code = struct {
@@ -89,10 +107,20 @@ pub const Code = struct {
     }
 
     pub fn push(self: Code, bit: u1) Code {
+        std.debug.assert(self.len < std.math.maxInt(@TypeOf(self.len)));
         return .{
             .code = self.code | @as(u64, bit) << @intCast(u6, self.len),
             .len = self.len + 1,
         };
+    }
+
+    pub fn format(self: Code, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        for (0..self.len) |i| {
+            const bit: u8 = @truncate(u1, self.code >> @intCast(u6, i));
+            try writer.writeByte(bit + '0');
+        }
     }
 };
 
