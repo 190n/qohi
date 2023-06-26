@@ -15,14 +15,14 @@ The numbers reported are "space saving", both versus uncompressed image data and
 | photo_kodak | 44.4 | 8.13 | 4.79 | 1.73 |
 | photo_tecnick | 40.86 | 11.71 | 1.32 | 2.52 |
 | photo_wikipedia | 34.14 | 11.02 | 0.82 | 2.24 |
-| pngimg | 79.78 | 14.6 | 7.38 | 12.74 |
-| screenshot_game | 78.5 | 17.36 | 13.42 | 19.18 |
-| screenshot_web | 91.83 | 4.42 | 3.83 | 5.17 |
+| pngimg | 79.78 | 14.6 | 7.36 | 12.74 |
+| screenshot_game | 78.5 | 17.36 | 13.37 | 19.15 |
+| screenshot_web | 91.83 | 4.42 | 3.68 | 5.16 |
 | textures_photo | 41.24 | 13.62 | 9.5 | 3.2 |
-| textures_pk | 47.97 | 17.73 | 5.62 | 5.96 |
+| textures_pk | 47.97 | 17.73 | 5.6 | 5.95 |
 | textures_pk01 | 66.32 | 19.22 | 8.47 | 8.24 |
-| textures_pk02 | 63.3 | 17.07 | 9.2 | 9.74 |
-| textures_plants | 75.96 | 12.12 | 3.5 | 2.85 |
+| textures_pk02 | 63.3 | 17.07 | 9.19 | 9.73 |
+| textures_plants | 75.96 | 12.12 | 3.49 | 2.86 |
 
 ## Format
 

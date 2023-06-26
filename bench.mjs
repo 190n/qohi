@@ -47,7 +47,8 @@ async function worker(queue, rawResults, qoiResults) {
         if (!file.endsWith('.png')) {
             continue;
         }
-        const { uncompressed, qoi, huffman } = JSON.parse((await $`../zig-out/bin/qohi ${file}`).stdout);
+        const { uncompressed, huffman } = JSON.parse((await $`../zig-out/bin/qohi ${file}`).stdout);
+        const qoi = parseInt((await $`convert ${file} qoi:- | wc -c`).stdout) - 22;
         const rawSaving = 100 * (uncompressed - huffman) / uncompressed;
         const qoiSaving = 100 * (qoi - huffman) / qoi;
         rawResults.push(rawSaving);
