@@ -10,20 +10,20 @@ The numbers reported are "space saving", both versus uncompressed image data and
 
 | category | saving vs. raw (avg, %) | stddev (pp) | saving vs. qoi (avg, %) | stddev (pp) |
 |----------|-------------------------|-------------|-------------------------|-------------|
-| icon_512 | 92.16 | 4.2 | 7.7 | 6.01 |
-| icon_64 | 73.15 | 8.7 | 6.3 | 4.77 |
-| photo_kodak | 44.4 | 8.13 | 4.79 | 1.73 |
-| photo_tecnick | 40.86 | 11.71 | 1.32 | 2.52 |
-| photo_wikipedia | 34.14 | 11.02 | 0.82 | 2.24 |
-| pngimg | 79.78 | 14.6 | 7.36 | 12.74 |
-| screenshot_game | 78.5 | 17.36 | 13.37 | 19.15 |
-| screenshot_web | 91.83 | 4.42 | 3.68 | 5.16 |
-| textures_photo | 41.24 | 13.62 | 9.5 | 3.2 |
-| textures_pk | 47.97 | 17.73 | 5.6 | 5.95 |
-| textures_pk01 | 66.32 | 19.22 | 8.47 | 8.24 |
-| textures_pk02 | 63.3 | 17.07 | 9.19 | 9.73 |
-| textures_plants | 75.96 | 12.12 | 3.49 | 2.86 |
-| total | 64.11 | 22.67 | 7.76 | 11.4 |
+| icon_512 | 92.95 | 3.63 | 16.19 | 4.78 |
+| icon_64 | 75.86 | 8.06 | 16.05 | 5.53 |
+| photo_kodak | 47.77 | 7.96 | 10.62 | 2.51 |
+| photo_tecnick | 44.27 | 11.64 | 7.19 | 3.86 |
+| photo_wikipedia | 37.97 | 10.9 | 6.7 | 3.56 |
+| pngimg | 81.33 | 13.32 | 15.01 | 13.82 |
+| screenshot_game | 80.02 | 16.22 | 19.46 | 18.54 |
+| screenshot_web | 92.17 | 4.33 | 8.34 | 6.68 |
+| textures_photo | 48.39 | 13.73 | 20.9 | 5.75 |
+| textures_pk | 53.93 | 14.27 | 15.56 | 6.03 |
+| textures_pk01 | 69.23 | 17.59 | 16.45 | 7.71 |
+| textures_pk02 | 66.7 | 14.44 | 16.69 | 8.48 |
+| textures_plants | 77.79 | 11.39 | 11.16 | 4.19 |
+| total | 67.59 | 19.94 | 16.01 | 11.05 |
 
 ## Format
 
@@ -85,17 +85,11 @@ Here is how each chunk is mapped to symbols:
     | run(LENGTH) |
     |-|
 
-At this point, the encoder has a histogram that tells it how many times each symbol occurs and a list of symbols in order. It uses the histogram to build a Huffman tree **for all symbols _except_ `integer`**. Integer symbols are encoded differently.
+At this point, the encoder has a histogram that tells it how many times each symbol occurs and a list of symbols in order. It uses the histogram to build two Huffman trees: one for only integer symbols, and one for all the other symbols.
 
-Each symbol is written using the binary code determined by the tree. For `integer` symbols, the following variable-length encoding is used instead:
+Each symbol is written using the binary code determined by the tree for that type of symbol.
 
-- For integers 2 bits long or fewer, write a `0` bit and then the two bits of the integer.
-- For integers 3-4 bits long, write `10` and then four bits of the integer.
-- For integers 5-8 bits long, write `11` and then eight bits of the integer.
-
-This results in writing 3 bits for 0-to-2-bit integers, 6 bits for 3-to-4-bit ones, and 10 bits for 5-to-8-bit ones.
-
-There will certainly be collisions between the Huffman codes and this integer encoding scheme. However, those do not matter in practice because the decoder knows based on the prior symbol whether it should expect another symbol or an integer.
+There will certainly be collisions between the Huffman codes from the two different trees. However, these do not matter in practice because the decoder knows based on the prior symbol whether it should expect an integer or another kind of symbol.
 
 ## Future
 
