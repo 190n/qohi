@@ -10,20 +10,20 @@ The numbers reported are "space saving", both versus uncompressed image data and
 
 | category | saving vs. raw (avg, %) | stddev (pp) | saving vs. qoi (avg, %) | stddev (pp) |
 |----------|-------------------------|-------------|-------------------------|-------------|
-| icon_512 | 92.95 | 3.63 | 16.19 | 4.78 |
-| icon_64 | 75.86 | 8.06 | 16.05 | 5.53 |
-| photo_kodak | 47.77 | 7.96 | 10.62 | 2.51 |
-| photo_tecnick | 44.27 | 11.64 | 7.19 | 3.86 |
-| photo_wikipedia | 37.97 | 10.9 | 6.7 | 3.56 |
-| pngimg | 81.33 | 13.32 | 15.01 | 13.82 |
-| screenshot_game | 80.02 | 16.22 | 19.46 | 18.54 |
-| screenshot_web | 92.17 | 4.33 | 8.34 | 6.68 |
-| textures_photo | 48.39 | 13.73 | 20.9 | 5.75 |
-| textures_pk | 53.93 | 14.27 | 15.56 | 6.03 |
-| textures_pk01 | 69.23 | 17.59 | 16.45 | 7.71 |
-| textures_pk02 | 66.7 | 14.44 | 16.69 | 8.48 |
-| textures_plants | 77.79 | 11.39 | 11.16 | 4.19 |
-| total | 67.59 | 19.94 | 16.01 | 11.05 |
+| icon_512 | 93.58 | 3.42 | 24.52 | 6.19 |
+| icon_64 | 78.38 | 7.38 | 24.87 | 5.92 |
+| photo_kodak | 52.24 | 5.37 | 17.85 | 1.96 |
+| photo_tecnick | 49.45 | 7.83 | 14.93 | 4.85 |
+| photo_wikipedia | 44.86 | 6.73 | 16.25 | 5.51 |
+| pngimg | 83.22 | 11.78 | 23.58 | 15.44 |
+| screenshot_game | 81.62 | 14.75 | 26.43 | 19.01 |
+| screenshot_web | 93.45 | 3.88 | 24.85 | 10.19 |
+| textures_photo | 54.31 | 8.46 | 28.77 | 4.99 |
+| textures_pk | 64.76 | 9.01 | 34.11 | 7.52 |
+| textures_pk01 | 73.17 | 15.19 | 26.55 | 8.8 |
+| textures_pk02 | 69.88 | 12.72 | 24.41 | 9.06 |
+| textures_plants | 79.53 | 10.43 | 18.05 | 6.14 |
+| total | 72.95 | 15.56 | 27.7 | 12.7 |
 
 ## Format
 
@@ -79,6 +79,8 @@ Here is how each chunk is mapped to symbols:
 
     | luma(DG) | integer(DR_DG) | integer(DB_DG) |
     |-|-|-|
+
+    Experimentally, I found this 8/8/8-bit setup to be better than 6/4/4, 8/4/4, and 8/6/6.
 
 - `QOI_OP_RUN` is a `run` symbol containing the run length:
 
