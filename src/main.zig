@@ -59,21 +59,4 @@ pub fn main() !void {
         \\}}
         \\
     , .{ uncompressed_size, e.total_qoi_size, huffman_size });
-
-    var sym_table = try Huffman.buildCodeTable(allocator, trees.symbol_tree);
-    defer sym_table.deinit();
-    var int_table = try Huffman.buildCodeTable(allocator, trees.integer_tree);
-    defer int_table.deinit();
-
-    for (e.symbols.items) |sym| {
-        switch (sym) {
-            .integer => {
-                std.debug.print(", {} ({})", .{ int_table.get(sym).?, sym.integer });
-            },
-            else => {
-                std.debug.print("\n{any}: {}", .{ sym, sym_table.get(sym).? });
-            },
-        }
-    }
-    std.debug.print("\n", .{});
 }
