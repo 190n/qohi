@@ -10,20 +10,20 @@ The numbers reported are "space saving", both versus uncompressed image data and
 
 | category | saving vs. raw (avg, %) | stddev (pp) | saving vs. qoi (avg, %) | stddev (pp) |
 |----------|-------------------------|-------------|-------------------------|-------------|
-| icon_512 | 93.58 | 3.42 | 24.52 | 6.19 |
-| icon_64 | 78.38 | 7.38 | 24.87 | 5.92 |
-| photo_kodak | 52.24 | 5.37 | 17.85 | 1.96 |
-| photo_tecnick | 49.45 | 7.83 | 14.93 | 4.85 |
-| photo_wikipedia | 44.86 | 6.73 | 16.25 | 5.51 |
-| pngimg | 83.22 | 11.78 | 23.58 | 15.44 |
-| screenshot_game | 81.62 | 14.75 | 26.43 | 19.01 |
-| screenshot_web | 93.45 | 3.88 | 24.85 | 10.19 |
-| textures_photo | 54.31 | 8.46 | 28.77 | 4.99 |
-| textures_pk | 64.76 | 9.01 | 34.11 | 7.52 |
-| textures_pk01 | 73.17 | 15.19 | 26.55 | 8.8 |
-| textures_pk02 | 69.88 | 12.72 | 24.41 | 9.06 |
-| textures_plants | 79.53 | 10.43 | 18.05 | 6.14 |
-| total | 72.95 | 15.56 | 27.7 | 12.7 |
+| icon_512 | 93.61 | 3.39 | 24.78 | 6.06 |
+| icon_64 | 78.5 | 7.34 | 25.29 | 5.8 |
+| photo_kodak | 52.34 | 5.37 | 18.02 | 1.95 |
+| photo_tecnick | 49.8 | 7.93 | 15.57 | 4.65 |
+| photo_wikipedia | 45.22 | 6.94 | 16.86 | 5.28 |
+| pngimg | 83.32 | 11.74 | 24.04 | 15.17 |
+| screenshot_game | 81.76 | 14.63 | 26.88 | 18.66 |
+| screenshot_web | 93.48 | 3.85 | 25.2 | 9.96 |
+| textures_photo | 54.46 | 8.47 | 29.01 | 4.97 |
+| textures_pk | 64.77 | 9.01 | 34.13 | 7.49 |
+| textures_pk01 | 73.2 | 15.17 | 26.6 | 8.75 |
+| textures_pk02 | 69.95 | 12.67 | 24.56 | 8.94 |
+| textures_plants | 79.61 | 10.38 | 18.4 | 6.02 |
+| total | 73.03 | 15.52 | 27.95 | 12.46 |
 
 ## Format
 
