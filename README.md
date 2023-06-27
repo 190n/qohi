@@ -45,13 +45,13 @@ Here are the types of symbols available:
 |---------|---------|
 | rgb     | none    |
 | rgba    | none    |
-| index   | 6-bit unsigned integer: index into array of recent colors |
+| index   | 8-bit unsigned integer: index into array of recent colors |
 | diff    | none    |
-| luma    | 6-bit signed integer: green channel difference from the previous pixel |
-| run     | 6-bit unsigned integer: run length |
+| luma    | 8-bit signed integer: green channel difference from the previous pixel |
+| run     | 8-bit unsigned integer: run length |
 | integer | 8-bit unsigned integer: some arbitrary value |
 
-For `integer` symbols, if the integer value to encode is signed (such as the 2-bit signed integers used in `QOI_OP_DIFF` or the 4-bit signed integers `dr_dg` and `db_dg` in `QOI_OP_LUMA`), it is first reinterpreted as an unsigned integer of the same size (using two's complement), and then padded with zeroes to 8 bits. For instance, `-1` as a 4-bit signed integer is first written as a 4-bit unsigned integer (`0b1111`), and then padded to 8 bits (`0b00001111`).
+For `integer` symbols, if the integer value to encode is signed (such as the 2-bit signed integers used in `QOI_OP_DIFF`), it is first reinterpreted as an unsigned integer of the same size (using two's complement), and then padded with zeroes to 8 bits. For instance, `-1` as a 4-bit signed integer is first written as a 4-bit unsigned integer (`0b1111`), and then padded to 8 bits (`0b00001111`).
 
 Here is how each chunk is mapped to symbols:
 
@@ -75,7 +75,7 @@ Here is how each chunk is mapped to symbols:
     | diff | integer(DR) | integer(DG) | integer(DB) |
     |-|-|-|-|
 
-- `QOI_OP_LUMA` is a `luma` symbol containing the green channel difference, followed by two `integer` symbols for `dr_dg` and `db_dg` as defined in the QOI specification:
+- `QOI_OP_LUMA` is a `luma` symbol containing the green channel difference, followed by two `integer` symbols for `dr_dg` and `db_dg` as defined in the QOI specification (except, here they are all 8-bit signed values instead of 6- and 4-bit as in QOI):
 
     | luma(DG) | integer(DR_DG) | integer(DB_DG) |
     |-|-|-|
@@ -95,10 +95,13 @@ There will certainly be collisions between the Huffman codes from the two differ
 
 Places I may take this:
 
-- Fine-tune the encoding scheme without breaking changes to the chunks as used by QOI
-- Possible breaking changes to QOI: use [YCoCg](https://en.wikipedia.org/wiki/YCoCg) colorspace, increase maximum run length and/or hash table size, increase maximum representable difference between pixels
-- Determine the header format and implement a decoder
-- Support multithreaded encoding and decoding
-    - The encoder could split an image into chunks where each chunk starts at a byte-aligned boundary and does not refer to data from previous chunks
-    - The encoder could encode the chunk boundaries into the output file, which would let the decoder process chunks in parallel
-- Support higher bit depth
+- [x] Fine-tune the encoding scheme without breaking changes to the chunks as used by QOI
+- Possible breaking changes to QOI:
+    - [ ] use [YCoCg](https://en.wikipedia.org/wiki/YCoCg) colorspace
+    - [x] increase maximum run length and/or hash table size
+    - [x] increase maximum representable difference between pixels
+- [ ] Determine the header format and implement a decoder
+- [ ] Support multithreaded encoding and decoding
+    - [ ] The encoder could split an image into chunks where each chunk starts at a byte-aligned boundary and does not refer to data from previous chunks
+    - [ ] The encoder could encode the chunk boundaries into the output file, which would let the decoder process chunks in parallel
+- [ ] Support higher bit depth

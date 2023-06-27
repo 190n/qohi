@@ -6,8 +6,8 @@ const PixelDifference = @import("./pixel.zig").PixelDifference;
 const Qoi = @import("./qoi.zig");
 
 last_pixel: Pixel = .{ .r = 0, .g = 0, .b = 0, .a = 255 },
-recent_pixels: [64]Pixel = .{.{ .r = 0, .g = 0, .b = 0, .a = 0 }} ** 64,
-run_length: u6 = 0,
+recent_pixels: [256]Pixel = .{.{ .r = 0, .g = 0, .b = 0, .a = 0 }} ** 256,
+run_length: u8 = 0,
 histogram: std.AutoHashMap(Qoi.Symbol, u64),
 symbols: std.ArrayList(Qoi.Symbol),
 total_qoi_size: usize = 0,
@@ -26,7 +26,7 @@ pub fn deinit(self: *Encoder) void {
 }
 
 fn emit(self: *Encoder, chunk: Qoi.Chunk) !void {
-    var buf: [9]Qoi.Symbol = undefined;
+    var buf: [5]Qoi.Symbol = undefined;
     const syms = chunk.toSymbols(&buf);
 
     for (syms) |s| {
@@ -80,11 +80,13 @@ pub fn addPixel(self: *Encoder, p: Pixel) !void {
     const diff = p.subtract(self.last_pixel);
 
     if (diff.isZero()) {
-        self.run_length += 1;
-        if (self.run_length >= 62) {
+        const max_run_length = std.math.maxInt(@TypeOf(self.run_length));
+        if (self.run_length == max_run_length) {
             // we reached maximum so send out a run chunk
-            try self.emit(Qoi.Chunk{ .run = 62 });
+            try self.emit(Qoi.Chunk{ .run = max_run_length });
             self.run_length = 0;
+        } else {
+            self.run_length += 1;
         }
         return;
     } else if (self.run_length > 0) {

@@ -3,16 +3,16 @@ const std = @import("std");
 pub const Chunk = union(enum) {
     rgb: [3]u8,
     rgba: [4]u8,
-    index: u6,
+    index: u8,
     diff: [3]i2,
     luma: struct {
-        dg: i6,
-        dr_dg: i4,
-        db_dg: i4,
+        dg: i8,
+        dr_dg: i8,
+        db_dg: i8,
     },
-    run: u6,
+    run: u8,
 
-    pub fn toSymbols(self: *const Chunk, buf: *[9]Symbol) []Symbol {
+    pub fn toSymbols(self: *const Chunk, buf: *[5]Symbol) []Symbol {
         switch (self.*) {
             .rgb => |channels| {
                 buf[0] = Symbol.rgb;
@@ -41,8 +41,8 @@ pub const Chunk = union(enum) {
             },
             .luma => |luma| {
                 buf[0] = Symbol.luma(luma.dg);
-                buf[1] = Symbol.integer(@bitCast(u4, luma.dr_dg));
-                buf[2] = Symbol.integer(@bitCast(u4, luma.db_dg));
+                buf[1] = Symbol.integer(@bitCast(u8, luma.dr_dg));
+                buf[2] = Symbol.integer(@bitCast(u8, luma.db_dg));
                 return buf[0..3];
             },
             .run => |len| {
@@ -56,25 +56,25 @@ pub const Chunk = union(enum) {
 pub const Symbol = union(enum) {
     rgb: void,
     rgba: void,
-    index: u6,
+    index: u8,
     diff: void,
-    luma: i6,
-    run: u6,
+    luma: i8,
+    run: u8,
     integer: u8,
 
     pub fn integer(x: u8) Symbol {
         return Symbol{ .integer = x };
     }
 
-    pub fn run(len: u6) Symbol {
+    pub fn run(len: u8) Symbol {
         return Symbol{ .run = len };
     }
 
-    pub fn luma(dg: i6) Symbol {
+    pub fn luma(dg: i8) Symbol {
         return Symbol{ .luma = dg };
     }
 
-    pub fn index(i: u6) Symbol {
+    pub fn index(i: u8) Symbol {
         return Symbol{ .index = i };
     }
 };

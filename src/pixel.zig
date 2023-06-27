@@ -15,8 +15,8 @@ pub const Pixel = extern struct {
         };
     }
 
-    pub fn hash(self: Pixel) u6 {
-        return @truncate(u6, (3 *% self.r) +% (5 *% self.g) +% (7 *% self.b) +% (11 *% self.a));
+    pub fn hash(self: Pixel) u8 {
+        return @truncate(u8, (3 *% self.r) +% (5 *% self.g) +% (7 *% self.b) +% (11 *% self.a));
     }
 };
 
@@ -41,7 +41,7 @@ test "Pixel.hash" {
     const a = Pixel{ .r = 40, .g = 30, .b = 20, .a = 10 };
     const b = Pixel{ .r = 4, .g = 16, .b = 64, .a = 255 };
     const c = Pixel{ .r = 255, .g = 255, .b = 255, .a = 255 };
-    try std.testing.expectEqual(@as(u6, 8), a.hash());
-    try std.testing.expectEqual(@as(u6, 17), b.hash());
-    try std.testing.expectEqual(@as(u6, 38), c.hash());
+    try std.testing.expectEqual(@as(u8, 8), a.hash());
+    try std.testing.expectEqual(@as(u8, 17), b.hash());
+    try std.testing.expectEqual(@as(u8, 230), c.hash());
 }
