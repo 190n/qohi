@@ -29,9 +29,6 @@ pub const Chunk = union(enum) {
                 return buf[0..5];
             },
             .index => |index| {
-                // buf[0] = Symbol.index;
-                // buf[1] = Symbol.integer(index);
-                // return buf[0..2];
                 buf[0] = Symbol.index(index);
                 return buf[0..1];
             },
@@ -43,20 +40,12 @@ pub const Chunk = union(enum) {
                 return buf[0..4];
             },
             .luma => |luma| {
-                // buf[0] = Symbol.luma;
-                // inline for (&.{ "dg", "dr_dg", "db_dg" }, 1..) |name, i| {
-                //     buf[i] = Symbol.integer(@field(luma, name));
-                // }
-                // return buf[0..4];
                 buf[0] = Symbol.luma(luma.dg);
                 buf[1] = Symbol.integer(@bitCast(u4, luma.dr_dg));
                 buf[2] = Symbol.integer(@bitCast(u4, luma.db_dg));
                 return buf[0..3];
             },
             .run => |len| {
-                // buf[0] = Symbol.run;
-                // buf[1] = Symbol.integer(len);
-                // return buf[0..2];
                 buf[0] = Symbol.run(len);
                 return buf[0..1];
             },
@@ -103,18 +92,5 @@ test "Chunk.toSymbols" {
 
     const integer = Symbol.integer;
     _ = integer;
-
-    // // const symbol_strings = [_][]const Symbol{
-    // //     &.{ .rgb, integer(1), integer(2), integer(3) },
-    // //     &.{ .rgba, integer(1), integer(2), integer(3), integer(4) },
-    // //     &.{ .index, integer(50) },
-    // //     &.{ .diff, integer(-1), integer(0), integer(1) },
-    // //     &.{ .luma, integer(10), integer(5), integer(3) },
-    // //     &.{ .run, integer(30) },
-    // // };
-
-    // for (chunks, symbol_strings) |c, ss| {
-    //     var buf: [9]Symbol = undefined;
-    //     try std.testing.expectEqualSlices(Symbol, ss, c.toSymbols(&buf));
-    // }
+    @panic("not a real test");
 }

@@ -30,41 +30,73 @@ pub const Node = struct {
         self.* = undefined;
         allocator.destroy(self);
     }
+
+    pub fn compare(context: void, a: *const Node, b: *const Node) std.math.Order {
+        _ = context;
+        return std.math.order(a.weight, b.weight);
+    }
 };
 
-fn compareNodes(context: void, a: *Node, b: *Node) std.math.Order {
-    _ = context;
-    return std.math.order(a.weight, b.weight);
-}
+const NodePq = std.PriorityQueue(*Node, void, Node.compare);
 
-pub fn createTree(allocator: std.mem.Allocator, histogram: *const std.AutoHashMap(Qoi.Symbol, u64)) !*Node {
-    var pq = std.PriorityQueue(*Node, void, compareNodes).init(allocator, {});
-    defer pq.deinit();
-
-    var it = histogram.iterator();
-    while (it.next()) |entry| {
-        if (entry.key_ptr.* != .integer) {
-            try pq.add(try Node.init(allocator, entry.key_ptr.*, entry.value_ptr.*));
-        }
-    }
-
-    // ensure we have at least 2 unique symbols
+fn ensureAtLeast2(pq: *NodePq, allocator: std.mem.Allocator) !void {
     var i: u8 = 0;
     while (pq.len < 2) : (i += 1) {
-        try pq.add(try Node.init(allocator, Qoi.Symbol.integer(i), 1));
+        try pq.add(try Node.init(allocator, Qoi.Symbol.integer(i), 0));
     }
+}
 
+fn consumeAndJoin(pq: *NodePq, allocator: std.mem.Allocator) !void {
     while (pq.len > 1) {
         const left = pq.remove();
         const right = pq.remove();
         const parent = try Node.join(allocator, left, right);
         try pq.add(parent);
     }
-
-    return pq.remove();
 }
 
-fn getCompressedSizeInternal(tree: *const Node, histogram: *const std.AutoHashMap(Qoi.Symbol, u64), code_length: u6) u64 {
+pub const Trees = struct {
+    symbol_tree: *Node,
+    integer_tree: *Node,
+
+    pub fn deinit(self: *Trees, allocator: std.mem.Allocator) void {
+        self.symbol_tree.deinit(allocator);
+        self.integer_tree.deinit(allocator);
+        self.* = undefined;
+    }
+};
+
+pub fn createTree(
+    allocator: std.mem.Allocator,
+    histogram: *const std.AutoHashMap(Qoi.Symbol, u64),
+) !Trees {
+    var pq1 = NodePq.init(allocator, {});
+    defer pq1.deinit();
+    var pq2 = NodePq.init(allocator, {});
+    defer pq2.deinit();
+
+    var it = histogram.iterator();
+    while (it.next()) |entry| {
+        const queue_to_use = switch (entry.key_ptr.*) {
+            .integer => &pq2,
+            else => &pq1,
+        };
+        try queue_to_use.add(try Node.init(allocator, entry.key_ptr.*, entry.value_ptr.*));
+    }
+
+    inline for (.{ &pq1, &pq2 }) |pq| {
+        try ensureAtLeast2(pq, allocator);
+        try consumeAndJoin(pq, allocator);
+    }
+
+    return .{ .symbol_tree = pq1.remove(), .integer_tree = pq2.remove() };
+}
+
+fn getCompressedSizeInternal(
+    tree: *const Node,
+    histogram: *const std.AutoHashMap(Qoi.Symbol, u64),
+    code_length: u6,
+) u64 {
     var size: u64 = 0;
     if (tree.left) |left| {
         size += getCompressedSizeInternal(left, histogram, code_length + 1);
@@ -72,29 +104,18 @@ fn getCompressedSizeInternal(tree: *const Node, histogram: *const std.AutoHashMa
     if (tree.right) |right| {
         size += getCompressedSizeInternal(right, histogram, code_length + 1);
     }
-    if (tree.symbol) |symbol| {
-        size += code_length * (histogram.get(symbol) orelse 0);
+    if (tree.symbol) |_| {
+        size += code_length * tree.weight;
     }
     return size;
 }
 
-pub fn getCompressedSize(tree: *const Node, histogram: *const std.AutoHashMap(Qoi.Symbol, u64)) u64 {
-    var size = getCompressedSizeInternal(tree, histogram, 0);
-    // account for integer symbols
-    var it = histogram.iterator();
-    while (it.next()) |entry| {
-        if (entry.key_ptr.* == .integer) {
-            const int = entry.key_ptr.integer;
-            const count = entry.value_ptr.*;
-            if (int <= 0b11) {
-                size += 3 * count;
-            } else if (int <= 0b1111) {
-                size += 6 * count;
-            } else {
-                size += 10 * count;
-            }
-        }
-    }
+pub fn getCompressedSize(
+    trees: Trees,
+    histogram: *const std.AutoHashMap(Qoi.Symbol, u64),
+) u64 {
+    var size = getCompressedSizeInternal(trees.symbol_tree, histogram, 0);
+    size += getCompressedSizeInternal(trees.integer_tree, histogram, 0);
     return size;
 }
 
