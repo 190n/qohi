@@ -35,7 +35,7 @@ pub const Chunk = union(enum) {
             .diff => |diffs| {
                 buf[0] = Symbol.diff;
                 for (diffs, 1..) |x, i| {
-                    buf[i] = Symbol.integer(@bitCast(u2, x));
+                    buf[i] = Symbol.integer(@bitCast(u8, @as(i8, x)));
                 }
                 return buf[0..4];
             },

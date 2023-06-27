@@ -51,7 +51,11 @@ Here are the types of symbols available:
 | run     | 8-bit unsigned integer: run length |
 | integer | 8-bit unsigned integer: some arbitrary value |
 
-For `integer` symbols, if the integer value to encode is signed (such as the 2-bit signed integers used in `QOI_OP_DIFF`), it is first reinterpreted as an unsigned integer of the same size (using two's complement), and then padded with zeroes to 8 bits. For instance, `-1` as a 4-bit signed integer is first written as a 4-bit unsigned integer (`0b1111`), and then padded to 8 bits (`0b00001111`).
+For `integer` symbols, if the integer value to encode is signed (such as the 2-bit signed integers used in `QOI_OP_DIFF`), it is sign-extended to 8 bits if necessary and then reinterpreted as unsigned using two's complement. For instance, the difference of `-2` is:
+
+- 2-bit signed integer: `0b10` = -2
+- 8-bit signed integer: `0b11111110` = -2
+- 8-bit unsigned integer: `0b11111110` = 254
 
 Here is how each chunk is mapped to symbols:
 
@@ -70,7 +74,7 @@ Here is how each chunk is mapped to symbols:
     | index(INDEX) |
     |-|
 
-- `QOI_OP_DIFF` is a `diff` symbol followed by three `integer` symbols for the red, green, and blue channel differences
+- `QOI_OP_DIFF` is a `diff` symbol followed by three `integer` symbols for the red, green, and blue channel differences. These differences are still 2-bit signed integers as in QOI; I found that making them larger reduced efficiency. This is probably because a larger range of differences clutters the Huffman tree with many more values so they all get longer codes.
 
     | diff | integer(DR) | integer(DG) | integer(DB) |
     |-|-|-|-|
