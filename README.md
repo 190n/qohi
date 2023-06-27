@@ -23,6 +23,7 @@ The numbers reported are "space saving", both versus uncompressed image data and
 | textures_pk01 | 66.32 | 19.22 | 8.47 | 8.24 |
 | textures_pk02 | 63.3 | 17.07 | 9.19 | 9.73 |
 | textures_plants | 75.96 | 12.12 | 3.49 | 2.86 |
+| total | 64.11 | 22.67 | 7.76 | 11.4 |
 
 ## Format
 

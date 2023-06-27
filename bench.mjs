@@ -25,6 +25,18 @@ function colorValue(n) {
     return n > 0 ? chalk.green(n) : chalk.red(n);
 }
 
+function report(category, rawSavings, qoiSavings) {
+    if (argv.markdown) {
+        process.stdout.write(`| ${category} |`);
+        process.stdout.write(` ${round(mean(rawSavings))} | ${round(stddev(rawSavings))} |`);
+        process.stdout.write(` ${round(mean(qoiSavings))} | ${round(stddev(qoiSavings))} |`);
+        console.log();
+    } else {
+        console.log(`  vs. raw: avg = ${colorValue(round(mean(rawSavings)))}%, \u03c3 = ${round(stddev(rawSavings))}pp`);
+        console.log(`  vs. QOI: avg = ${colorValue(round(mean(qoiSavings)))}%, \u03c3 = ${round(stddev(qoiSavings))}pp`);
+    }
+}
+
 function printProgress(progress) {
     if (argv.markdown) return;
 
@@ -61,12 +73,14 @@ if (argv.markdown) {
     console.log('|----------|-------------------------|-------------|-------------------------|-------------|');
 }
 
+const overallRaw = [];
+const overallQoi = [];
+
 for (const c of categories) {
-    if (argv.markdown) {
-        process.stdout.write(`| ${c} |`);
-    } else {
+    if (!argv.markdown) {
         process.stdout.write(`${c}: `);
     }
+
     const pics = await glob(`${c}/*`);
     const totalLength = pics.length;
     const rawSavings = [], qoiSavings = [];
@@ -83,13 +97,15 @@ for (const c of categories) {
 
     await Promise.all(workers);
 
-    if (argv.markdown) {
-        process.stdout.write(` ${round(mean(rawSavings))} | ${round(stddev(rawSavings))} |`);
-        process.stdout.write(` ${round(mean(qoiSavings))} | ${round(stddev(qoiSavings))} |`);
+    if (!argv.markdown) {
         console.log();
-    } else {
-        console.log();
-        console.log(`  vs. raw: avg = ${colorValue(round(mean(rawSavings)))}%, σ = ${round(stddev(rawSavings))}pp`);
-        console.log(`  vs. QOI: avg = ${colorValue(round(mean(qoiSavings)))}%, σ = ${round(stddev(qoiSavings))}pp`);
     }
+    report(c, rawSavings, qoiSavings);
+    overallRaw.push(...rawSavings);
+    overallQoi.push(...qoiSavings);
 }
+
+if (!argv.markdown) {
+    console.log('total:');
+}
+report('total', overallRaw, overallQoi);
