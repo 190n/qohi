@@ -162,3 +162,20 @@ pub fn buildCodeTable(allocator: std.mem.Allocator, tree: *const Node) !std.Auto
     try buildCodeTableInternal(tree, &table, Code.init());
     return table;
 }
+
+pub fn writeTree(
+    comptime WriterType: type,
+    bw: *std.io.BitWriter(.Big, WriterType),
+    tree: *const Node,
+) !void {
+    if (tree.left) |left| {
+        if (tree.right) |right| {
+            writeTree(WriterType, bw, left);
+            writeTree(WriterType, bw, right);
+            try bw.writeBits(0, 1);
+        }
+    } else if (tree.symbol) |symbol| {
+        try bw.writeBits(1, 1);
+        try symbol.writeTo(WriterType, bw);
+    }
+}

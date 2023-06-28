@@ -64,6 +64,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    unit_tests.linkLibC();
+    unit_tests.addIncludePath("vendor/stb");
+    unit_tests.addCSourceFile("src/stbi.c", &.{});
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
 

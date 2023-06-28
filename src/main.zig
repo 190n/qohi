@@ -58,3 +58,11 @@ pub fn main() !void {
         \\
     , .{ uncompressed_size, huffman_size });
 }
+
+comptime {
+    std.testing.refAllDecls(@import("./encoder.zig"));
+    std.testing.refAllDecls(@import("./huffman.zig"));
+    std.testing.refAllDecls(@import("./pixel.zig"));
+    std.testing.refAllDecls(@import("./qoi.zig"));
+    std.testing.refAllDecls(@import("./stb_image.zig"));
+}
