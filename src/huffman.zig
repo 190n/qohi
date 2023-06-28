@@ -35,6 +35,22 @@ pub const Node = struct {
         _ = context;
         return std.math.order(a.weight, b.weight);
     }
+
+    fn expectStructureEquals(expected: *const Node, actual: *const Node) !void {
+        try std.testing.expectEqual(expected.symbol, actual.symbol);
+        if (expected.left) |left| {
+            try std.testing.expect(actual.left != null);
+            try expectStructureEquals(left, actual.left.?);
+        } else {
+            try std.testing.expectEqual(@as(?*Node, null), actual.left);
+        }
+        if (expected.right) |right| {
+            try std.testing.expect(actual.right != null);
+            try expectStructureEquals(right, actual.right.?);
+        } else {
+            try std.testing.expectEqual(@as(?*Node, null), actual.right);
+        }
+    }
 };
 
 const NodePq = std.PriorityQueue(*Node, void, Node.compare);
@@ -66,7 +82,7 @@ pub const Trees = struct {
     }
 };
 
-pub fn createTree(
+pub fn createTrees(
     allocator: std.mem.Allocator,
     histogram: *const std.AutoHashMap(Qoi.Symbol, u64),
 ) !Trees {
@@ -170,12 +186,137 @@ pub fn writeTree(
 ) !void {
     if (tree.left) |left| {
         if (tree.right) |right| {
-            writeTree(WriterType, bw, left);
-            writeTree(WriterType, bw, right);
-            try bw.writeBits(0, 1);
+            try writeTree(WriterType, bw, left);
+            try writeTree(WriterType, bw, right);
+            try bw.writeBits(@as(u1, 0), 1);
         }
     } else if (tree.symbol) |symbol| {
-        try bw.writeBits(1, 1);
+        try bw.writeBits(@as(u1, 1), 1);
         try symbol.writeTo(WriterType, bw);
     }
+}
+
+pub fn rebuildTree(
+    allocator: std.mem.Allocator,
+    comptime ReaderType: type,
+    br: *std.io.BitReader(.Big, ReaderType),
+    num_leaves: u16,
+    int_symbols: bool,
+) !*Node {
+    var stack = std.ArrayList(*Node).init(allocator);
+    defer stack.deinit();
+    errdefer for (stack.items) |n| {
+        n.deinit(allocator);
+    };
+    const num_nodes = 2 * num_leaves - 1;
+
+    for (0..num_nodes) |_| {
+        const bit = try br.readBitsNoEof(u1, 1);
+        if (bit == 1) {
+            // read a symbol
+            const new_node = try Node.init(
+                allocator,
+                if (int_symbols)
+                    Qoi.Symbol.integer(try br.readBitsNoEof(u8, 8))
+                else
+                    try Qoi.Symbol.readFrom(ReaderType, br),
+                0,
+            );
+            errdefer new_node.deinit(allocator);
+            try stack.append(new_node);
+        } else {
+            // create an interior node
+            const joined = blk: {
+                const right = stack.popOrNull() orelse return error.InvalidFile;
+                errdefer right.deinit(allocator);
+                const left = stack.popOrNull() orelse return error.InvalidFile;
+                errdefer left.deinit(allocator);
+                break :blk try Node.join(allocator, left, right);
+            };
+            errdefer joined.deinit(allocator);
+            try stack.append(joined);
+        }
+    }
+
+    if (stack.items.len != 1) return error.InvalidFile;
+    return stack.pop();
+}
+
+fn rebuildTreeThenFree(
+    allocator: std.mem.Allocator,
+    buffer: []const u8,
+    num_leaves: u16,
+    int_symbols: bool,
+) !void {
+    var buf_stream = std.io.fixedBufferStream(buffer);
+    var br = std.io.bitReader(.Big, buf_stream.reader());
+    const tree = try rebuildTree(allocator, std.io.FixedBufferStream([]const u8).Reader, &br, num_leaves, int_symbols);
+    tree.deinit(allocator);
+}
+
+test "write/rebuildTree round-trip" {
+    var output = std.ArrayList(u8).init(std.testing.allocator);
+    defer output.deinit();
+    var histogram = std.AutoHashMap(Qoi.Symbol, u64).init(std.testing.allocator);
+    defer histogram.deinit();
+
+    try histogram.put(Qoi.Symbol.rgb, 5);
+    try histogram.put(Qoi.Symbol.luma(20), 3);
+    try histogram.put(Qoi.Symbol.run(128), 10);
+    try histogram.put(Qoi.Symbol.diff, 50);
+    try histogram.put(Qoi.Symbol.index(3), 2);
+    try histogram.put(Qoi.Symbol.integer(200), 30);
+    try histogram.put(Qoi.Symbol.integer(9), 20);
+    try histogram.put(Qoi.Symbol.integer(8), 10);
+    try histogram.put(Qoi.Symbol.integer(0), 300);
+    try histogram.put(Qoi.Symbol.integer(20), 5);
+    var trees = try createTrees(std.testing.allocator, &histogram);
+    defer trees.deinit(std.testing.allocator);
+
+    // symbol tree
+    var bw = std.io.bitWriter(.Big, output.writer());
+    try writeTree(std.ArrayList(u8).Writer, &bw, trees.symbol_tree);
+    try bw.flushBits();
+
+    var buf_stream = std.io.fixedBufferStream(output.items);
+    var br = std.io.bitReader(.Big, buf_stream.reader());
+    const new_symbol_tree = try rebuildTree(
+        std.testing.allocator,
+        std.io.FixedBufferStream([]u8).Reader,
+        &br,
+        5,
+        false,
+    );
+    defer new_symbol_tree.deinit(std.testing.allocator);
+    try Node.expectStructureEquals(trees.symbol_tree, new_symbol_tree);
+
+    try std.testing.checkAllAllocationFailures(std.testing.allocator, rebuildTreeThenFree, .{
+        output.items,
+        5,
+        false,
+    });
+
+    // integer tree
+    output.clearRetainingCapacity();
+    bw = std.io.bitWriter(.Big, output.writer());
+    try writeTree(std.ArrayList(u8).Writer, &bw, trees.integer_tree);
+    try bw.flushBits();
+
+    buf_stream = std.io.fixedBufferStream(output.items);
+    br = std.io.bitReader(.Big, buf_stream.reader());
+    const new_integer_tree = try rebuildTree(
+        std.testing.allocator,
+        std.io.FixedBufferStream([]u8).Reader,
+        &br,
+        5,
+        true,
+    );
+    defer new_integer_tree.deinit(std.testing.allocator);
+    try Node.expectStructureEquals(trees.integer_tree, new_integer_tree);
+
+    try std.testing.checkAllAllocationFailures(std.testing.allocator, rebuildTreeThenFree, .{
+        output.items,
+        5,
+        true,
+    });
 }

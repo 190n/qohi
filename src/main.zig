@@ -44,7 +44,7 @@ pub fn main() !void {
     try e.addPixels(pixels);
     try e.terminate();
 
-    var trees = try Huffman.createTree(allocator, &e.histogram);
+    var trees = try Huffman.createTrees(allocator, &e.histogram);
     defer trees.deinit(allocator);
     const huffman_size = try std.math.divCeil(u64, Huffman.getCompressedSize(trees, &e.histogram), 8);
     const uncompressed_size = image.x * image.y * @intFromEnum(image.channels_in_file);
