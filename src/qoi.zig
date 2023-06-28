@@ -35,14 +35,14 @@ pub const Chunk = union(enum) {
             .diff => |diffs| {
                 buf[0] = Symbol.diff;
                 for (diffs, 1..) |x, i| {
-                    buf[i] = Symbol.integer(@bitCast(u8, @as(i8, x)));
+                    buf[i] = Symbol.integer(@bitCast(@as(i8, x)));
                 }
                 return buf[0..4];
             },
             .luma => |luma| {
                 buf[0] = Symbol.luma(luma.dg);
-                buf[1] = Symbol.integer(@bitCast(u8, luma.dr_dg));
-                buf[2] = Symbol.integer(@bitCast(u8, luma.db_dg));
+                buf[1] = Symbol.integer(@bitCast(luma.dr_dg));
+                buf[2] = Symbol.integer(@bitCast(luma.db_dg));
                 return buf[0..3];
             },
             .run => |len| {
@@ -95,7 +95,7 @@ pub const Symbol = union(enum) {
             },
             .luma => |dg| {
                 try bw.writeBits(@as(u2, 0b01), 2);
-                try bw.writeBits(@bitCast(u8, dg), 8);
+                try bw.writeBits(@as(u8, @bitCast(dg)), 8);
             },
             .run => |len| {
                 try bw.writeBits(@as(u3, 0b100), 3);
@@ -114,7 +114,7 @@ pub const Symbol = union(enum) {
             const second = try br.readBitsNoEof(u1, 1);
             return switch (second) {
                 0 => Symbol.index(try br.readBitsNoEof(u8, 8)),
-                1 => Symbol.luma(@bitCast(i8, try br.readBitsNoEof(u8, 8))),
+                1 => Symbol.luma(@bitCast(try br.readBitsNoEof(u8, 8))),
             };
         } else {
             const rest = try br.readBitsNoEof(u2, 2);

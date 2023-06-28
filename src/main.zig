@@ -38,7 +38,7 @@ pub fn main() !void {
     };
     defer image.deinit();
 
-    const pixels = @ptrCast([*]const Pixel, image.data.ptr)[0..(image.x * image.y)];
+    const pixels = @as([*]const Pixel, @ptrCast(image.data.ptr))[0..(image.x * image.y)];
     var e = Encoder.init(allocator);
     defer e.deinit();
     try e.addPixels(pixels);

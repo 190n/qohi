@@ -13,19 +13,19 @@ pub var allocator = std.heap.c_allocator;
 export fn stbiMalloc(size: usize) ?[*]align(max_align) u8 {
     const slice = allocator.alignedAlloc(u8, max_align, pad_amount + size) catch return null;
     // store the size before the data
-    @ptrCast(*usize, slice.ptr).* = size;
+    @as(*usize, @ptrCast(slice.ptr)).* = size;
     return slice.ptr + pad_amount;
 }
 
 export fn stbiRealloc(maybe_ptr: ?[*]align(max_align) u8, new_size: usize) ?[*]align(max_align) u8 {
     if (maybe_ptr) |ptr| {
         const orig_ptr = ptr - pad_amount;
-        const orig_size = @ptrCast(*const usize, orig_ptr).*;
+        const orig_size = @as(*const usize, @ptrCast(orig_ptr)).*;
         const orig_slice = orig_ptr[0..(pad_amount + orig_size)];
         // realloc will take the alignment from the type of the old slice which is why we don't have
         // "aligned realloc" here or anything
         const new_slice = allocator.realloc(orig_slice, pad_amount + new_size) catch return null;
-        @ptrCast(*usize, new_slice.ptr).* = new_size;
+        @as(*usize, @ptrCast(new_slice.ptr)).* = new_size;
         return new_slice.ptr + pad_amount;
     } else return stbiMalloc(new_size);
 }
@@ -34,7 +34,7 @@ export fn stbiFree(maybe_ptr: ?[*]align(max_align) u8) void {
     // free(NULL) should work and do nothing
     if (maybe_ptr) |ptr| {
         const orig_ptr = ptr - pad_amount;
-        const orig_size = @ptrCast(*const usize, orig_ptr).*;
+        const orig_size = @as(*const usize, @ptrCast(orig_ptr)).*;
         const orig_slice = orig_ptr[0..(pad_amount + orig_size)];
         allocator.free(orig_slice);
     }
@@ -69,12 +69,12 @@ pub const Channels = enum(u3) {
 fn makeCallbacks(comptime ContextPtr: type) stb_image.stbi_io_callbacks {
     const callbacks = struct {
         fn opaqueToContext(user: ?*anyopaque) ContextPtr {
-            return @ptrCast(ContextPtr, @alignCast(@alignOf(@typeInfo(ContextPtr).Pointer.child), user));
+            return @ptrCast(@alignCast(user));
         }
 
         pub fn read(user: ?*anyopaque, data: ?[*]u8, size: c_int) callconv(.C) c_int {
             const context = opaqueToContext(user);
-            return @intCast(c_int, context.reader().read(data.?[0..@intCast(usize, size)]) catch 0);
+            return @intCast(context.reader().read(data.?[0..@intCast(size)]) catch 0);
         }
 
         pub fn skip(user: ?*anyopaque, n: c_int) callconv(.C) void {
@@ -132,17 +132,17 @@ pub fn load(stream_ptr: anytype, desired_channels: ?Channels, error_ptr: ?*[:0]c
     );
 
     if (result) |ptr| {
-        const actual_channels = if (desired_channels) |dc| @intFromEnum(dc) else @intCast(u3, channels_in_file);
+        const actual_channels = if (desired_channels) |dc| @intFromEnum(dc) else @as(u3, @intCast(channels_in_file));
         return Image{
-            .data = ptr[0..(@intCast(usize, x) * @intCast(usize, y) * actual_channels)],
-            .x = @intCast(usize, x),
-            .y = @intCast(usize, y),
-            .channels = @enumFromInt(Channels, actual_channels),
-            .channels_in_file = @enumFromInt(Channels, channels_in_file),
+            .data = ptr[0..(@as(usize, @intCast(x)) * @as(usize, @intCast(y)) * actual_channels)],
+            .x = @as(usize, @intCast(x)),
+            .y = @as(usize, @intCast(y)),
+            .channels = @as(Channels, @enumFromInt(actual_channels)),
+            .channels_in_file = @as(Channels, @enumFromInt(channels_in_file)),
         };
     } else {
         if (error_ptr) |ptr| {
-            ptr.* = std.mem.span(@ptrCast([*:0]const u8, stb_image.stbi_failure_reason()));
+            ptr.* = std.mem.span(@as([*:0]const u8, @ptrCast(stb_image.stbi_failure_reason())));
         }
         return error.StbImageError;
     }

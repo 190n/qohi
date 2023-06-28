@@ -16,7 +16,7 @@ pub const Pixel = extern struct {
     }
 
     pub fn hash(self: Pixel) u8 {
-        return @truncate(u8, (3 *% self.r) +% (5 *% self.g) +% (7 *% self.b) +% (11 *% self.a));
+        return @truncate((3 *% self.r) +% (5 *% self.g) +% (7 *% self.b) +% (11 *% self.a));
     }
 };
 

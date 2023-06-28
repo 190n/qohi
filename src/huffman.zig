@@ -130,7 +130,7 @@ pub const Code = struct {
     pub fn push(self: Code, bit: u1) Code {
         std.debug.assert(self.len < std.math.maxInt(@TypeOf(self.len)));
         return .{
-            .code = self.code | @as(u64, bit) << @intCast(u6, self.len),
+            .code = self.code | @as(u64, bit) << @intCast(self.len),
             .len = self.len + 1,
         };
     }
@@ -139,7 +139,7 @@ pub const Code = struct {
         _ = options;
         _ = fmt;
         for (0..self.len) |i| {
-            const bit: u8 = @truncate(u1, self.code >> @intCast(u6, i));
+            const bit: u8 = @as(u1, @truncate(self.code >> @intCast(i)));
             try writer.writeByte(bit + '0');
         }
     }
