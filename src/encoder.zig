@@ -10,7 +10,6 @@ recent_pixels: [256]Pixel = .{.{ .r = 0, .g = 0, .b = 0, .a = 0 }} ** 256,
 run_length: u8 = 0,
 histogram: std.AutoHashMap(Qoi.Symbol, u64),
 symbols: std.ArrayList(Qoi.Symbol),
-total_qoi_size: usize = 0,
 
 pub fn init(allocator: std.mem.Allocator) Encoder {
     return .{
@@ -38,15 +37,6 @@ fn emit(self: *Encoder, chunk: Qoi.Chunk) !void {
         }
         try self.symbols.append(s);
     }
-
-    self.total_qoi_size += switch (chunk) {
-        .rgb => 4,
-        .rgba => 5,
-        .index => 1,
-        .diff => 1,
-        .luma => 2,
-        .run => 1,
-    };
 }
 
 fn maybeCreateDiff(diff: PixelDifference) ?Qoi.Chunk {

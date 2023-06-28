@@ -40,26 +40,21 @@ export fn stbiFree(maybe_ptr: ?[*]align(max_align) u8) void {
     }
 }
 
-pub const STBImageResult = union(enum) {
-    err: [:0]const u8,
-    ok: struct {
-        /// pointer to color data; length = x * y * channels
-        data: []u8,
-        /// width of the image
-        x: usize,
-        /// height of the image
-        y: usize,
-        /// how many channels are in the returned buffer
-        channels: Channels,
-        /// how many channels are in the file
-        channels_in_file: Channels,
-    },
+pub const Image = struct {
+    /// pointer to color data; length = x * y * channels
+    data: []u8,
+    /// width of the image
+    x: usize,
+    /// height of the image
+    y: usize,
+    /// how many channels are in the returned buffer
+    channels: Channels,
+    /// how many channels are in the file
+    channels_in_file: Channels,
 
-    /// if the result was success, free the buffer
-    pub fn deinit(self: *STBImageResult) void {
-        if (self.* == .ok) {
-            stb_image.stbi_image_free(self.ok.data.ptr);
-        }
+    /// free the buffer
+    pub fn deinit(self: *Image) void {
+        stb_image.stbi_image_free(self.data.ptr);
         self.* = undefined;
     }
 };
@@ -113,15 +108,13 @@ fn makeCallbacks(comptime ContextPtr: type) stb_image.stbi_io_callbacks {
 }
 
 /// load an image using stbi_image
-/// StreamType:       what type of I/O stream you will use (like std.fs.File or
-///                   std.io.FixedBufferStream([]const u8)); must support .reader() and
-///                   .seekableStream()
-/// stream:           the stream itself
+/// stream_ptr:       pointer to some I/O stream (supporting .reader() and .seekableStream())
 /// desired_channels: if null, the returned buffer has as many channels in it as were actually in
 ///                   the image. if non-null, stb_image will convert it to the number of channels
 ///                   you asked for.
+/// error_ptr:        if non-null and error occurs, set to point to error message
 /// call .deinit() on the result when you are done
-pub fn load(stream_ptr: anytype, desired_channels: ?Channels) STBImageResult {
+pub fn load(stream_ptr: anytype, desired_channels: ?Channels, error_ptr: ?*[:0]const u8) !Image {
     var x: c_int = undefined;
     var y: c_int = undefined;
     var channels_in_file: c_int = undefined;
@@ -131,7 +124,7 @@ pub fn load(stream_ptr: anytype, desired_channels: ?Channels) STBImageResult {
         // possibly cast away constness -- this is okay as stb_image itself doesn't modify the user
         // pointer, it only passes it (as void *) to functions that might modify it, but we will
         // cast back to a const pointer if stream_ptr was originally const.
-        @ptrFromInt(*anyopaque, @intFromPtr(stream_ptr)),
+        @constCast(stream_ptr),
         &x,
         &y,
         &channels_in_file,
@@ -140,18 +133,19 @@ pub fn load(stream_ptr: anytype, desired_channels: ?Channels) STBImageResult {
 
     if (result) |ptr| {
         const actual_channels = if (desired_channels) |dc| @intFromEnum(dc) else @intCast(u3, channels_in_file);
-        return STBImageResult{
-            .ok = .{
-                .data = ptr[0..(@intCast(usize, x) * @intCast(usize, y) * actual_channels)],
-                .x = @intCast(usize, x),
-                .y = @intCast(usize, y),
-                .channels = @enumFromInt(Channels, actual_channels),
-                .channels_in_file = @enumFromInt(Channels, channels_in_file),
-            },
+        return Image{
+            .data = ptr[0..(@intCast(usize, x) * @intCast(usize, y) * actual_channels)],
+            .x = @intCast(usize, x),
+            .y = @intCast(usize, y),
+            .channels = @enumFromInt(Channels, actual_channels),
+            .channels_in_file = @enumFromInt(Channels, channels_in_file),
         };
-    } else return STBImageResult{
-        .err = std.mem.span(@ptrCast([*:0]const u8, stb_image.stbi_failure_reason())),
-    };
+    } else {
+        if (error_ptr) |ptr| {
+            ptr.* = std.mem.span(@ptrCast([*:0]const u8, stb_image.stbi_failure_reason()));
+        }
+        return error.StbImageError;
+    }
 }
 
 test "I/O callbacks" {
@@ -188,13 +182,12 @@ test "image loading with specified channels" {
     const png = @embedFile("./test_image.png");
     var stream = std.io.fixedBufferStream(png);
     // file is RGB, but 4 should make it generate an alpha channel for us
-    var result = load(&stream, .rgba);
+    var result = try load(&stream, .rgba, null);
     defer result.deinit();
-    try std.testing.expect(result == .ok);
-    try std.testing.expectEqual(@as(usize, 3), result.ok.x);
-    try std.testing.expectEqual(@as(usize, 2), result.ok.y);
-    try std.testing.expectEqual(Channels.rgba, result.ok.channels);
-    try std.testing.expectEqual(Channels.rgb, result.ok.channels_in_file);
+    try std.testing.expectEqual(@as(usize, 3), result.x);
+    try std.testing.expectEqual(@as(usize, 2), result.y);
+    try std.testing.expectEqual(Channels.rgba, result.channels);
+    try std.testing.expectEqual(Channels.rgb, result.channels_in_file);
     try std.testing.expectEqualSlices(u8, &[_]u8{
         0xFF, 0x00, 0x00, 0xFF, // red
         0x00, 0xFF, 0x00, 0xFF, // green
@@ -202,20 +195,19 @@ test "image loading with specified channels" {
         0x00, 0xFF, 0xFF, 0xFF, // cyan
         0xFF, 0x00, 0xFF, 0xFF, // magenta
         0xFF, 0xFF, 0x00, 0xFF, // yellow
-    }, result.ok.data);
+    }, result.data);
 }
 
 test "image loading with unspecified channels" {
     allocator = std.testing.allocator;
     const png = @embedFile("./test_image.png");
     var stream = std.io.fixedBufferStream(png);
-    var result = load(&stream, null);
+    var result = try load(&stream, null, null);
     defer result.deinit();
-    try std.testing.expect(result == .ok);
-    try std.testing.expectEqual(@as(usize, 3), result.ok.x);
-    try std.testing.expectEqual(@as(usize, 2), result.ok.y);
-    try std.testing.expectEqual(Channels.rgb, result.ok.channels);
-    try std.testing.expectEqual(Channels.rgb, result.ok.channels_in_file);
+    try std.testing.expectEqual(@as(usize, 3), result.x);
+    try std.testing.expectEqual(@as(usize, 2), result.y);
+    try std.testing.expectEqual(Channels.rgb, result.channels);
+    try std.testing.expectEqual(Channels.rgb, result.channels_in_file);
     try std.testing.expectEqualSlices(u8, &[_]u8{
         0xFF, 0x00, 0x00, // red
         0x00, 0xFF, 0x00, // green
@@ -223,15 +215,14 @@ test "image loading with unspecified channels" {
         0x00, 0xFF, 0xFF, // cyan
         0xFF, 0x00, 0xFF, // magenta
         0xFF, 0xFF, 0x00, // yellow
-    }, result.ok.data);
+    }, result.data);
 }
 
 test "unsuccessful image loading" {
     allocator = std.testing.allocator;
     const buf = [_]u8{ 1, 2, 3, 4, 5 };
     var stream = std.io.fixedBufferStream(&buf);
-    var result = load(&stream, null);
-    defer result.deinit();
-    try std.testing.expect(result == .err);
-    try std.testing.expectEqualSlices(u8, "Image not of any known type, or corrupt", result.err);
+    var err: [:0]const u8 = undefined;
+    try std.testing.expectError(error.StbImageError, load(&stream, null, &err));
+    try std.testing.expectEqualSlices(u8, "Image not of any known type, or corrupt", err);
 }

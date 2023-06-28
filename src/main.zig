@@ -31,15 +31,14 @@ pub fn main() !void {
     const input_name = matches.getSingleValue("INPUT") orelse return error.NoInputFile;
     const input_file = try std.fs.cwd().openFile(input_name, .{});
 
-    var image = StbImage.load(&input_file, StbImage.Channels.rgba);
+    var err: [:0]const u8 = undefined;
+    var image = StbImage.load(&input_file, StbImage.Channels.rgba, &err) catch {
+        std.debug.print("error opening image: {s}\n", .{err});
+        std.process.exit(1);
+    };
     defer image.deinit();
 
-    if (image == .err) {
-        std.debug.print("error opening image: {s}\n", .{image.err});
-        std.process.exit(1);
-    }
-
-    const pixels = @ptrCast([*]const Pixel, image.ok.data.ptr)[0..(image.ok.x * image.ok.y)];
+    const pixels = @ptrCast([*]const Pixel, image.data.ptr)[0..(image.x * image.y)];
     var e = Encoder.init(allocator);
     defer e.deinit();
     try e.addPixels(pixels);
@@ -48,15 +47,14 @@ pub fn main() !void {
     var trees = try Huffman.createTree(allocator, &e.histogram);
     defer trees.deinit(allocator);
     const huffman_size = try std.math.divCeil(u64, Huffman.getCompressedSize(trees, &e.histogram), 8);
-    const uncompressed_size = image.ok.x * image.ok.y * @intFromEnum(image.ok.channels_in_file);
+    const uncompressed_size = image.x * image.y * @intFromEnum(image.channels_in_file);
 
     const stdout = std.io.getStdOut().writer();
     try stdout.print(
         \\{{
         \\    "uncompressed": {},
-        \\    "qoi": {},
         \\    "huffman": {}
         \\}}
         \\
-    , .{ uncompressed_size, e.total_qoi_size, huffman_size });
+    , .{ uncompressed_size, huffman_size });
 }
