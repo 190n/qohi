@@ -80,7 +80,7 @@ pub const Symbol = union(enum) {
 
     pub fn writeTo(self: Symbol, comptime WriterType: type, bw: *std.io.BitWriter(.Big, WriterType)) !void {
         // integer symbols are in their own tree so we don't need to distinguish that this is an
-        // integer. other symbols (xx... = payload data):
+        // integer. just write the bits. other symbols (xx... = payload data):
         // index = 00  xxxxxxxx
         // luma  = 01  xxxxxxxx
         // run   = 100 xxxxxxxx

@@ -132,6 +132,18 @@ pub fn getCompressedSize(
 ) u64 {
     var size = getCompressedSizeInternal(trees.symbol_tree, histogram, 0);
     size += getCompressedSizeInternal(trees.integer_tree, histogram, 0);
+
+    var counter = std.io.countingWriter(std.io.null_writer);
+    var bw = std.io.bitWriter(.Big, counter.writer());
+    try writeTree(@TypeOf(counter.writer()), &bw, trees.symbol_tree);
+    try bw.flushBits();
+
+    bw = std.io.bitWriter(.Big, counter.writer());
+    try writeTree(@TypeOf(counter.writer()), &bw, trees.integer_tree);
+    try bw.flushBits();
+
+    size += counter.bytes_written;
+
     return size;
 }
 
